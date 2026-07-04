@@ -7,3 +7,44 @@ dist/
 
 # Dependency directories
 node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+secrets.*
+credentials.*
+*.secret
+
+# SSH & GPG keys
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+id_dsa
+*.gpg
+*.pgp
+
+# Cloud / IaC state
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+google-credentials.json
+gcloud-*.json
+aws-credentials
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
