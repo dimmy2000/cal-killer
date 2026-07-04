@@ -1,0 +1,41 @@
+{
+  "name": "cal-killer-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "mock": "prism mock ../tsp-output/schema/openapi.yaml -p 4010 -d",
+    "generate:api": "orval --config ./orval.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.13.0",
+    "@mantine/dates": "^7.13.0",
+    "@mantine/form": "^7.13.0",
+    "@mantine/hooks": "^7.13.0",
+    "@mantine/notifications": "^7.13.0",
+    "@tabler/icons-react": "^3.44.0",
+    "@tanstack/react-query": "^5.59.0",
+    "dayjs": "^1.11.13",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@stoplight/prism-cli": "^5.10.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "mantine-form-zod-resolver": "^1.1.0",
+    "orval": "^7.3.0",
+    "postcss": "^8.4.47",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  }
+}

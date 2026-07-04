@@ -274,10 +274,10 @@ model PageQuery {
 @route("/auth")
 @tag("Auth")
 interface Auth {
-  @route("/register") @post register(@body body: UserCreate): AuthTokens | Error;
-  @route("/login") @post login(@body body: LoginRequest): AuthTokens | Error;
-  @route("/refresh") @post refresh(@body body: RefreshRequest): AuthTokens | Error;
-  @route("/logout") @post logout(@body body: RefreshRequest): void | Error;
+  @route("/register") @post register(@body body: UserCreate): AuthTokens;
+  @route("/login") @post login(@body body: LoginRequest): AuthTokens;
+  @route("/refresh") @post refresh(@body body: RefreshRequest): AuthTokens;
+  @route("/logout") @post logout(@body body: RefreshRequest): void;
 }
 
 // ============================================================================
@@ -288,9 +288,9 @@ interface Auth {
 @tag("Users")
 @useAuth(BearerAuth)
 interface Users {
-  @route("/me") @get me(): User | Error;
-  @route("/me") @patch updateMe(@body body: UserUpdate): User | Error;
-  @route("/me/password") @patch changePassword(@body body: PasswordChange): void | Error;
+  @route("/me") @get me(): User;
+  @route("/me") @patch updateMe(@body body: UserUpdate): User;
+  @route("/me/password") @patch changePassword(@body body: PasswordChange): void;
 }
 
 // ============================================================================
@@ -301,15 +301,15 @@ interface Users {
 @tag("Schedules")
 @useAuth(BearerAuth)
 interface Schedules {
-  @get list(...PageQuery): Paginated<Schedule> | Error;
-  @post create(@body body: ScheduleCreate): Schedule | Error;
-  @route("/{id}") @get read(@path id: string): Schedule | Error;
-  @route("/{id}") @patch update(@path id: string, @body body: ScheduleUpdate): Schedule | Error;
-  @route("/{id}") @delete delete(@path id: string): void | Error;
+  @get list(...PageQuery): Paginated<Schedule>;
+  @post create(@body body: ScheduleCreate): Schedule;
+  @route("/{id}") @get read(@path id: string): Schedule;
+  @route("/{id}") @patch update(@path id: string, @body body: ScheduleUpdate): Schedule;
+  @route("/{id}") @delete delete(@path id: string): void;
 
-  @route("/{id}/overrides") @get listOverrides(@path id: string): ScheduleOverride[] | Error;
-  @route("/{id}/overrides") @post addOverride(@path id: string, @body body: ScheduleOverride): ScheduleOverride | Error;
-  @route("/{id}/overrides/{date}") @delete removeOverride(@path id: string, @path date: plainDate): void | Error;
+  @route("/{id}/overrides") @get listOverrides(@path id: string): ScheduleOverride[];
+  @route("/{id}/overrides") @post addOverride(@path id: string, @body body: ScheduleOverride): ScheduleOverride;
+  @route("/{id}/overrides/{date}") @delete removeOverride(@path id: string, @path date: plainDate): void;
 }
 
 // ============================================================================
@@ -320,11 +320,11 @@ interface Schedules {
 @tag("Event Types")
 @useAuth(BearerAuth)
 interface EventTypes {
-  @get list(...PageQuery, @query scheduleId?: string): Paginated<EventType> | Error;
-  @post create(@body body: EventTypeCreate): EventType | Error;
-  @route("/{id}") @get read(@path id: string): EventType | Error;
-  @route("/{id}") @patch update(@path id: string, @body body: EventTypeUpdate): EventType | Error;
-  @route("/{id}") @delete delete(@path id: string): void | Error;
+  @get list(...PageQuery, @query scheduleId?: string): Paginated<EventType>;
+  @post create(@body body: EventTypeCreate): EventType;
+  @route("/{id}") @get read(@path id: string): EventType;
+  @route("/{id}") @patch update(@path id: string, @body body: EventTypeUpdate): EventType;
+  @route("/{id}") @delete delete(@path id: string): void;
 }
 
 // ============================================================================
@@ -341,10 +341,10 @@ interface Bookings {
     @query eventTypeId?: string,
     @query from?: utcDateTime,
     @query to?: utcDateTime,
-  ): Paginated<Booking> | Error;
-  @route("/{id}") @get read(@path id: string): Booking | Error;
-  @route("/{id}/cancel") @post cancel(@path id: string): Booking | Error;
-  @route("/{id}/reschedule") @post reschedule(@path id: string, @body body: { startUtc: utcDateTime }): Booking | Error;
+  ): Paginated<Booking>;
+  @route("/{id}") @get read(@path id: string): Booking;
+  @route("/{id}/cancel") @post cancel(@path id: string): Booking;
+  @route("/{id}/reschedule") @post reschedule(@path id: string, @body body: { startUtc: utcDateTime }): Booking;
 }
 
 // ============================================================================
@@ -357,7 +357,7 @@ interface Public {
   @route("/{ownerSlug}/{eventSlug}") @get getEvent(
     @path ownerSlug: string,
     @path eventSlug: string,
-  ): PublicEventType | Error;
+  ): PublicEventType;
 
   @route("/{ownerSlug}/{eventSlug}/slots") @get getSlots(
     @path ownerSlug: string,
@@ -365,31 +365,31 @@ interface Public {
     @query from: utcDateTime,
     @query to: utcDateTime,
     @query tz?: string,
-  ): Slot[] | Error;
+  ): Slot[];
 
   @route("/{ownerSlug}/{eventSlug}/bookings") @post createBooking(
     @path ownerSlug: string,
     @path eventSlug: string,
     @body body: PublicBookingCreate,
-  ): BookingWithToken | Error;
+  ): BookingWithToken;
 
   @route("/bookings/{id}") @get getBooking(
     @path id: string,
     @query token: string,
-  ): Booking | Error;
+  ): Booking;
 
   @route("/bookings/{id}/confirm") @post confirmBooking(
     @path id: string,
     @body body: ManageToken,
-  ): Booking | Error;
+  ): Booking;
 
   @route("/bookings/{id}/cancel") @post cancelBooking(
     @path id: string,
     @body body: ManageToken,
-  ): Booking | Error;
+  ): Booking;
 
   @route("/bookings/{id}/reschedule") @post rescheduleBooking(
     @path id: string,
     @body body: RescheduleRequest,
-  ): BookingWithToken | Error;
+  ): BookingWithToken;
 }
