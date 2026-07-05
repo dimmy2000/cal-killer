@@ -30,12 +30,134 @@ from app.db.session import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
 
 
+@pytest.fixture()
+def make_booking():
+    """Factory that inserts a Booking (+ Attendee) directly via SessionLocal.
+
+    Returns the Booking row as a dict (matching the API shape). Used by the
+    Bookings tests to set up state without going through the (unimplemented)
+    public creation endpoint.
+    """
+
+    from datetime import UTC, datetime, timedelta
+
+    from app.auth.service import hash_password
+    from app.db.models.booking import Attendee, Booking
+
+    def _make(
+        *,
+        event_type_id: str,
+        status: str = "pending",
+        start_utc: datetime | None = None,
+        duration_min: int = 30,
+        location: str = "online",
+        manage_token: str = "token-abc",
+        attendee_name: str = "Alice",
+        attendee_email: str = "alice@example.com",
+        attendee_notes: str | None = None,
+        attendee_timezone: str = "UTC",
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+    ) -> dict:
+        session = SessionLocal()
+        try:
+            now = datetime.now(UTC)
+            start = start_utc or (now + timedelta(days=1))
+            end = start + timedelta(minutes=duration_min)
+            attendee = Attendee(
+                name=attendee_name,
+                email=attendee_email,
+                notes=attendee_notes,
+                timezone=attendee_timezone,
+            )
+            session.add(attendee)
+            session.flush()
+            booking = Booking(
+                event_type_id=event_type_id,
+                status=status,
+                start_utc=start,
+                end_utc=end,
+                location=location,
+                manage_token_hash=hash_password(manage_token),
+                attendee_id=attendee.id,
+                created_at=created_at or now,
+                updated_at=updated_at or now,
+            )
+            session.add(booking)
+            session.commit()
+            session.refresh(booking)
+            session.refresh(attendee)
+            return {
+                "id": booking.id,
+                "status": booking.status,
+                "startUtc": booking.start_utc.isoformat(),
+                "endUtc": booking.end_utc.isoformat(),
+                "eventTypeId": booking.event_type_id,
+                "attendee": {
+                    "name": attendee.name,
+                    "email": attendee.email,
+                    "notes": attendee.notes,
+                    "timezone": attendee.timezone,
+                },
+                "location": booking.location,
+                "createdAt": booking.created_at.isoformat(),
+                "updatedAt": booking.updated_at.isoformat(),
+                "_attendee_id": attendee.id,
+                "_manage_token": manage_token,
+            }
+        finally:
+            session.close()
+
+    return _make
+
+
+@pytest.fixture()
+def make_event_type():
+    """Factory that creates an EventType via the API under the given client.
+
+    Wraps a Schedule + EventType so booking tests have a stable parent.
+    """
+
+    def _make(
+        client,
+        *,
+        slug: str = "intro",
+        requires_confirmation: bool = False,
+        duration_min: int = 30,
+        schedule_id: str | None = None,
+    ) -> dict:
+        if schedule_id is None:
+            r = client.post(
+                "/schedules",
+                json={"name": "Work", "timezone": "UTC", "workingHours": []},
+            )
+            assert r.status_code == 201, r.text
+            schedule_id = r.json()["id"]
+        r = client.post(
+            "/event-types",
+            json={
+                "slug": slug,
+                "title": "Intro",
+                "durationMin": duration_min,
+                "location": "online",
+                "scheduleId": schedule_id,
+                "requiresConfirmation": requires_confirmation,
+            },
+        )
+        assert r.status_code == 201, r.text
+        return r.json()
+
+    return _make
+
+
 @pytest.fixture(autouse=True)
 def cleanup_db():
     """Drop and recreate users + schedules tables before each test."""
     session = SessionLocal()
     try:
         for table in (
+            "bookings",
+            "attendees",
             "event_types",
             "schedule_overrides",
             "working_hours",
@@ -111,6 +233,33 @@ def cleanup_db():
                 requires_confirmation BOOLEAN NOT NULL DEFAULT FALSE,
                 created_at TIMESTAMP NOT NULL,
                 UNIQUE(user_id, slug)
+            )
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE attendees (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                notes TEXT,
+                timezone TEXT NOT NULL
+            )
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE bookings (
+                id TEXT PRIMARY KEY,
+                event_type_id TEXT NOT NULL REFERENCES event_types(id),
+                status TEXT NOT NULL,
+                start_utc TIMESTAMP NOT NULL,
+                end_utc TIMESTAMP NOT NULL,
+                location TEXT NOT NULL,
+                manage_token_hash TEXT NOT NULL,
+                attendee_id TEXT NOT NULL REFERENCES attendees(id),
+                created_at TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP NOT NULL
             )
             """)
         )

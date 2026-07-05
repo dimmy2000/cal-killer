@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app.config import settings
+from app.db import models  # noqa: F401 — populate Base.metadata
 from app.db.base import Base
 
 config = context.config
