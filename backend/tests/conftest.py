@@ -36,6 +36,7 @@ def cleanup_db():
     session = SessionLocal()
     try:
         for table in (
+            "event_types",
             "schedule_overrides",
             "working_hours",
             "schedules",
@@ -89,6 +90,27 @@ def cleanup_db():
                 end_min INTEGER NOT NULL,
                 available BOOLEAN NOT NULL,
                 UNIQUE(schedule_id, date)
+            )
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE event_types (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                schedule_id TEXT NOT NULL REFERENCES schedules(id),
+                slug TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                duration_min INTEGER NOT NULL,
+                location TEXT NOT NULL,
+                color TEXT,
+                padding_min_before INTEGER NOT NULL DEFAULT 0,
+                padding_min_after INTEGER NOT NULL DEFAULT 0,
+                min_notice_min INTEGER NOT NULL DEFAULT 0,
+                requires_confirmation BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMP NOT NULL,
+                UNIQUE(user_id, slug)
             )
             """)
         )
