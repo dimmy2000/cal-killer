@@ -32,10 +32,16 @@ from app.main import app  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def cleanup_db():
-    """Drop and recreate users table before each test."""
+    """Drop and recreate users + schedules tables before each test."""
     session = SessionLocal()
     try:
-        session.execute(text("DROP TABLE IF EXISTS users"))
+        for table in (
+            "schedule_overrides",
+            "working_hours",
+            "schedules",
+            "users",
+        ):
+            session.execute(text(f"DROP TABLE IF EXISTS {table}"))
         session.execute(
             text("""
             CREATE TABLE users (
@@ -48,7 +54,43 @@ def cleanup_db():
                 avatar_url TEXT,
                 created_at TIMESTAMP NOT NULL
             )
-        """)
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE schedules (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL,
+                timezone TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL
+            )
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE working_hours (
+                id TEXT PRIMARY KEY,
+                schedule_id TEXT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+                day_of_week INTEGER NOT NULL,
+                start_min INTEGER NOT NULL,
+                end_min INTEGER NOT NULL,
+                UNIQUE(schedule_id, day_of_week)
+            )
+            """)
+        )
+        session.execute(
+            text("""
+            CREATE TABLE schedule_overrides (
+                id TEXT PRIMARY KEY,
+                schedule_id TEXT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+                date TEXT NOT NULL,
+                start_min INTEGER NOT NULL,
+                end_min INTEGER NOT NULL,
+                available BOOLEAN NOT NULL,
+                UNIQUE(schedule_id, date)
+            )
+            """)
         )
         session.commit()
     finally:
@@ -74,6 +116,32 @@ def auth_client():
             password_hash=hash_password("testpass123"),
             name="Test User",
             username="testuser",
+            timezone="UTC",
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        token = create_access_token(user.id)
+        client.headers["Authorization"] = f"Bearer {token}"
+    finally:
+        session.close()
+
+    yield client
+
+
+@pytest.fixture()
+def other_user_client():
+    """Second TestClient with a different registered user — for owner-scope checks."""
+    client = TestClient(app)
+
+    session = SessionLocal()
+    try:
+        user = User(
+            email="other@example.com",
+            password_hash=hash_password("otherpass"),
+            name="Other User",
+            username="otheruser",
             timezone="UTC",
         )
         session.add(user)
