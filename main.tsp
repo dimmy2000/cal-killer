@@ -125,7 +125,6 @@ model Schedule {
   id: string;
   name: string;
   timezone: string;
-  isDefault: boolean;
   workingHours: WorkingHours[];
   overrides: ScheduleOverride[];
   createdAt: utcDateTime;
@@ -134,7 +133,6 @@ model Schedule {
 model ScheduleCreate {
   name: string;
   timezone: string;
-  isDefault?: boolean;
   workingHours: WorkingHours[];
   overrides?: ScheduleOverride[];
 }
@@ -142,7 +140,6 @@ model ScheduleCreate {
 model ScheduleUpdate {
   name?: string;
   timezone?: string;
-  isDefault?: boolean;
   workingHours?: WorkingHours[];
 }
 
@@ -225,6 +222,7 @@ model Booking {
   attendee: Attendee;
   location: EventLocation;
   createdAt: utcDateTime;
+  updatedAt: utcDateTime;
 }
 
 model BookingWithToken {
@@ -339,6 +337,7 @@ interface Bookings {
     ...PageQuery,
     @query status?: BookingStatus,
     @query eventTypeId?: string,
+    @query attendeeEmail?: string,
     @query from?: utcDateTime,
     @query to?: utcDateTime,
   ): Paginated<Booking>;

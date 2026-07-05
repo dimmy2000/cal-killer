@@ -25,6 +25,7 @@ class Booking(BaseModel):
     attendee: Attendee
     location: str
     createdAt: str
+    updatedAt: str
 
 
 class RescheduleBody(BaseModel):

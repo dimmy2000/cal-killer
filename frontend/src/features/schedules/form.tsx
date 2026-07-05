@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   Select,
-  Switch,
   Button,
   Group,
   Card,
@@ -36,7 +35,6 @@ import { getLocalTimezone } from "@/lib/dayjs";
 interface FormValues {
   name: string;
   timezone: string;
-  isDefault: boolean;
   workingHours: WorkingHours[];
   overrides: ScheduleOverride[];
 }
@@ -74,7 +72,6 @@ export function ScheduleFormPage() {
     initialValues: {
       name: "",
       timezone: getLocalTimezone(),
-      isDefault: false,
       workingHours: [
         { dayOfWeek: 1, startMin: 9 * 60, endMin: 18 * 60 },
         { dayOfWeek: 2, startMin: 9 * 60, endMin: 18 * 60 },
@@ -98,7 +95,6 @@ export function ScheduleFormPage() {
       form.setValues({
         name: schedule.name,
         timezone: schedule.timezone,
-        isDefault: schedule.isDefault,
         workingHours: schedule.workingHours,
         overrides: schedule.overrides,
       });
@@ -172,7 +168,6 @@ export function ScheduleFormPage() {
       const payload: ScheduleUpdate = {
         name: values.name,
         timezone: values.timezone,
-        isDefault: values.isDefault,
         workingHours: values.workingHours,
       };
       updateMutation.mutate({ id: id!, data: payload });
@@ -180,7 +175,6 @@ export function ScheduleFormPage() {
       const payload: ScheduleCreate = {
         name: values.name,
         timezone: values.timezone,
-        isDefault: values.isDefault,
         workingHours: values.workingHours,
         overrides: values.overrides,
       };
@@ -220,12 +214,6 @@ export function ScheduleFormPage() {
                   {...form.getInputProps("timezone")}
                 />
               </Group>
-              <Switch
-                label="По умолчанию"
-                description="Используется для новых типов событий"
-                key={form.key("isDefault")}
-                {...form.getInputProps("isDefault", { type: "checkbox" })}
-              />
             </Stack>
           </Card>
 

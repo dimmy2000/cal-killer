@@ -46,6 +46,7 @@ class Booking(BaseModel):
     attendee: AttendeeCreate
     location: EventLocation
     createdAt: str
+    updatedAt: str
 
 
 class BookingWithToken(BaseModel):

@@ -22,7 +22,6 @@ class Schedule(BaseModel):
     id: str
     name: str
     timezone: str
-    isDefault: bool
     workingHours: list[WorkingHours]
     overrides: list[ScheduleOverride]
     createdAt: str
@@ -31,7 +30,6 @@ class Schedule(BaseModel):
 class ScheduleCreate(BaseModel):
     name: str
     timezone: str
-    isDefault: bool | None = None
     workingHours: list[WorkingHours]
     overrides: list[ScheduleOverride] | None = None
 
@@ -39,5 +37,4 @@ class ScheduleCreate(BaseModel):
 class ScheduleUpdate(BaseModel):
     name: str | None = None
     timezone: str | None = None
-    isDefault: bool | None = None
     workingHours: list[WorkingHours] | None = None

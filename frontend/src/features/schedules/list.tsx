@@ -19,7 +19,6 @@ import {
   IconDots,
   IconPencil,
   IconTrash,
-  IconStarFilled,
 } from "@tabler/icons-react";
 import type { Schedule } from "@/api/generated/models";
 import {
@@ -112,15 +111,6 @@ export function SchedulesListPage() {
                 <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
                   <Group gap="sm">
                     <Text fw={600}>{s.name}</Text>
-                    {s.isDefault && (
-                      <Badge
-                        color="yellow"
-                        variant="light"
-                        leftSection={<IconStarFilled size={10} />}
-                      >
-                        По умолчанию
-                      </Badge>
-                    )}
                   </Group>
                   <Text size="sm" c="dimmed">
                     Часовой пояс: {s.timezone}
