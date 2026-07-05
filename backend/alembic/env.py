@@ -1,8 +1,4 @@
-"""Alembic environment.
-
-Reads the SQLAlchemy URL from `app.config.settings.DATABASE_URL` and targets
-`app.db.base.Base.metadata`. Offline and online modes both use the sync engine.
-"""
+"""Alembic environment."""
 
 from __future__ import annotations
 
@@ -14,13 +10,8 @@ from alembic import context
 from app.config import settings
 from app.db.base import Base
 
-# Import all model modules so their tables are registered on Base.metadata
-# before autogenerate runs. Add new models here as they are implemented.
-# from app.db.models import user, schedule, event_type, booking
-
 config = context.config
 
-# Inject the runtime DATABASE_URL into alembic's config.
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)
 
 if config.config_file_name is not None:
