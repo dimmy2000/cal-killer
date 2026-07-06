@@ -6,6 +6,8 @@ the shared error handlers. Endpoints return 501 stubs for now.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -45,6 +47,14 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["meta"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Раздаём собранную Vite-статику из Docker-образа (единый origin на :8000).
+    # Локальный dev (без /app/static) этот mount пропускает — Vite сам отдаёт статику.
+    static_dir = Path("/app/static")
+    if static_dir.is_dir():
+        from fastapi.staticfiles import StaticFiles
+
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="spa")
 
     return app
 

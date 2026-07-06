@@ -1,0 +1,59 @@
+# Version control
+.git
+.gitignore
+.github
+
+# macOS / editor cruft
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Node / frontend build artifacts (генерируются в образе)
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/src/api/generated
+frontend/tsconfig.tsbuildinfo
+
+# TypeSpec build artifacts (генерируется в образе на этапе tsp compile)
+tsp-output
+
+# Python / backend caches и виртуальное окружение (собирается в образе)
+backend/.venv
+backend/.pytest_cache
+backend/.ruff_cache
+**/__pycache__
+*.pyc
+
+# SQLite базы данных (runtime данные, не должны попасть в образ)
+backend/data/*.db
+backend/data/*.db-journal
+backend/data/*.sqlite*
+backend/test.db
+
+# Секреты / окружение
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+secrets.*
+credentials.*
+*.secret
+
+# Документация (не нужна для запуска образа)
+docs
+CONTEXT.md
+CLAUDE.md
+AGENTS.md
+
+# Docker-файлы не нужны внутри контекста сборки
+Dockerfile
+.dockerignore
+docker-compose.yml
