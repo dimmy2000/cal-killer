@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Two-package repo: a TypeSpec API contract at the root, a React/Vite frontend in `frontend/`, and a FastAPI backend in `backend/`. The frontend runs against either a Prism mock (`:4010`) or the real backend (`:8000`) of the generated OpenAPI spec.
+Three-part repo: a TypeSpec API contract at the root, a React/Vite frontend in `frontend/`, and a FastAPI backend in `backend/`. The frontend runs against either a Prism mock (`:4010`) or the real backend (`:8000`) of the generated OpenAPI spec.
 
 ## Commands
 
@@ -29,8 +29,6 @@ Python 3.12 + FastAPI + SQLAlchemy 2 (sync) + Alembic + SQLite, managed with `uv
 
 Ports: backend on `:8000`, Prism mock stays on `:4010`. Point the frontend at the backend with `VITE_API_TARGET=http://localhost:8000 npm run dev` (default stays on the mock at `:4010`).
 
-`tests/api/test_contract_match.py` diffs the FastAPI app's OpenAPI against `tsp-output/schema/openapi.yaml` — run `make compile` first so the spec exists.
-
 ### Required order when changing the API contract
 `main.tsp` → `npx tsp compile .` → `cd frontend && npm run generate:api` → `npm run typecheck`. Skipping the orval step leaves `src/api/generated/` stale and TypeScript will fail on the changed types.
 
@@ -40,7 +38,7 @@ Shortcut: `make api` runs compile → generate → typecheck; `make all` runs in
 
 - `frontend/src/api/client-config.ts` is the orval mutator (`customFetch`). It injects Bearer tokens from `@/auth/token-storage`, auto-refreshes on 401 (dedupes concurrent refreshes), and unwraps `{ data, status, headers }`. Don't bypass it — orval-generated hooks call `customFetch` by name.
 - Vite path alias: `@/*` → `frontend/src/*` (configured in both `vite.config.ts` and `tsconfig.json`).
-- orval runs in `tags-split` + `react-query` + `fetch` mode. Generated hooks live under `src/api/generated/<tag>/`.
+- orval runs in `tags-split` + `react-query` + `fetch` mode. Generated hooks live under `src/api/generated/<tag>/`. Generated files are auto-formatted with prettier on write (`afterAllFilesWrite` in `orval.config.ts`) — don't hand-edit or reformat them.
 - Feature modules live under `frontend/src/features/<domain>/` (auth, bookings, event-types, schedules, profile, public-booking, guest-manage). UI primitives are in `src/components/`.
 - Backend mirrors the API tags: route handlers live in `backend/app/features/<domain>/` (bookings, event_types, public, schedules, users), with `app/auth/` for JWT/Depends wiring. Tests mirror this layout under `backend/tests/{api,unit}/` — `tests/api/test_<tag>.py` per tag plus `test_contract_match.py`.
 - The contract test (`tests/api/test_contract_match.py`) diffs the FastAPI app's OpenAPI against `tsp-output/schema/openapi.yaml` — run `make compile` first so the spec exists. Test DB is isolated to `backend/data/calkiller.test.db` via `conftest.py`.
@@ -53,3 +51,17 @@ Shortcut: `make api` runs compile → generate → typecheck; `make all` runs in
 - `.gitignore` blocks many secret file patterns (`.env*`, `*.pem`, `*.key`, `credentials.*`, etc.) — don't try to commit fixtures with those names.
 - Mantine 7 + PostCSS requires `postcss-preset-mantine` and `postcss-simple-vars` (already wired in `frontend/postcss.config.cjs`); Mantine CSS imports must go through PostCSS, not Tailwind.
 - Backend ruff ignores `E501`, `B008` (so FastAPI's `Depends()`/`Query()` in argument defaults is idiomatic — don't "fix" it), and `UP046`. Line length 100; rule set `E,F,I,UP,B,SIM,RUF`.
+
+## CI
+
+GitHub Actions in `.github/workflows/ci.yml`. Triggers on push to `main` and on pull requests. Concurrency group cancels superseded PR runs.
+
+Jobs:
+- `gitleaks` — unconditional and blocking; mirrors the local pre-commit hook.
+- `frontend` — `tsp compile` → `generate:api` (orval) → `typecheck` → `build`; uploads `frontend/dist` as an artifact.
+- `backend-lint` — `ruff check . && ruff format --check .` via `uv run`.
+- `backend-test` — `tsp compile` (needed for `tests/api/test_contract_match.py`) → `uv sync --frozen` → `uv run pytest`.
+
+`frontend`, `backend-lint`, and `backend-test` are gated by `dorny/paths-filter` and skip when only unrelated paths (docs, README) change. `backend-test` also runs on contract-touching files (`main.tsp`, orval/client-config).
+
+Pinned versions: Node `24.18.0`, npm `11.18.0` (matches root `packageManager`), Python `3.12` (via `backend/.python-version`), uv via `astral-sh/setup-uv@v6`. `backend/uv.lock` is committed and CI uses `uv sync --frozen` — keep the lockfile updated when changing `backend/pyproject.toml`.

@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  filter:
+    name: Path filter
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      contract: ${{ steps.filter.outputs.contract }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - 'main.tsp'
+              - 'tspconfig.yaml'
+              - 'package.json'
+              - 'package-lock.json'
+            backend:
+              - 'backend/**'
+              - 'main.tsp'
+              - 'tspconfig.yaml'
+            contract:
+              - 'main.tsp'
+              - 'backend/**'
+              - 'frontend/orval.config.ts'
+              - 'frontend/src/api/client-config.ts'
+              - 'frontend/package.json'
+
+  gitleaks:
+    name: Gitleaks (secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  frontend:
+    name: Frontend (compile → generate → typecheck → build)
+    needs: filter
+    if: needs.filter.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+
+      - name: Install root deps (TypeSpec)
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Compile TypeSpec → OpenAPI
+        run: npx tsp compile .
+
+      - name: Generate orval hooks
+        working-directory: frontend
+        run: npm run generate:api
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: warn
+          retention-days: 7
+
+  backend-lint:
+    name: Backend lint (ruff)
+    needs: filter
+    if: needs.filter.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Sync backend deps
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Ruff check
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        working-directory: backend
+        run: uv run ruff format --check .
+
+  backend-test:
+    name: Backend tests (pytest + contract)
+    needs: filter
+    if: needs.filter.outputs.backend == 'true' || needs.filter.outputs.contract == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+
+      - name: Install root deps (TypeSpec)
+        run: npm ci
+
+      - name: Compile TypeSpec → OpenAPI (for contract test)
+        run: npx tsp compile .
+
+      - name: Sync backend deps
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run pytest
+        working-directory: backend
+        run: uv run pytest
