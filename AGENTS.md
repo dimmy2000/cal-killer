@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Three-part repo: a TypeSpec API contract at the root, a React/Vite frontend in `frontend/`, and a FastAPI backend in `backend/`. The frontend runs against either a Prism mock (`:4010`) or the real backend (`:8000`) of the generated OpenAPI spec.
+Three-part repo: a TypeSpec API contract at the root, a React/Vite frontend in `frontend/`, and a FastAPI backend in `backend/`. The frontend runs against either a Prism mock (`:4010`) or the real backend (`:8000`) of the generated OpenAPI spec. Domain language lives in `CONTEXT.md` (User/Owner/EventType/Schedule/Booking vocabulary) — reuse it instead of inventing synonyms.
 
 ## Commands
 
@@ -65,3 +65,15 @@ Jobs:
 `frontend`, `backend-lint`, and `backend-test` are gated by `dorny/paths-filter` and skip when only unrelated paths (docs, README) change. `backend-test` also runs on contract-touching files (`main.tsp`, orval/client-config).
 
 Pinned versions: Node `24.18.0`, npm `11.18.0` (matches root `packageManager`), Python `3.12` (via `backend/.python-version`), uv via `astral-sh/setup-uv@v6`. `backend/uv.lock` is committed and CI uses `uv sync --frozen` — keep the lockfile updated when changing `backend/pyproject.toml`.
+
+## Deploy (Docker)
+
+Single multi-stage image built from the root `Dockerfile`: Vite static is produced in stage 1, FastAPI serves it on `/` in stage 3, so frontend and backend share one origin on `:8000`.
+
+- Published to GHCR **only** on git tags matching `v*.*.*` (job `docker`). Tags `1.2.3`, `1.2`, `1`, and `latest` are derived via `docker/metadata-action`. No deploys happen from branch pushes.
+- Container runs `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000` — migrations auto-apply on every boot against the SQLite in `/app/data`.
+- `VOLUME /app/data` persists SQLite across container recreation; mount a named volume to keep it.
+- Healthcheck: `GET http://localhost:8000/health` → `{"status":"ok"}`.
+- Image is built with `--no-dev`, so dev-only tools (`pytest`, `ruff`, `httpx`, `pyyaml`) are absent at runtime — don't write runtime code that imports them.
+- Runtime config is env-driven; see `backend/app/config.py`. Defaults: `DATABASE_URL=sqlite:///./data/calkiller.db`, `JWT_SECRET=change-me-in-production` (must override in prod), `JWT_ALG=HS256`, `JWT_ACCESS_TTL_MINUTES=15`, `JWT_REFRESH_TTL_DAYS=30`.
+- The `@typespec/http-client-python` emitter is intentionally skipped during the image build (it needs Pyodide + CDN access, unreliable in isolated networks). The Python client is gitignored and unused by both apps — don't add it back to the build.
